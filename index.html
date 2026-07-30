@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StoryLens · 叙事节奏诊断工具</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --ink:#0d0d12;--paper:#f7f5f0;--white:#fff;--border:#e2ddd4;--lift:#f0ede6;
+  --green:#1a5c32;--blue:#2a4a8a;--gold:#a07510;--red:#a02828;--purple:#6a3a9a;
+  --text:#1a1712;--text2:#6a6258;--text3:#a8a090;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--text);font-family:'Noto Sans SC',sans-serif;font-weight:300;line-height:1.7}
+
+/* NAV */
+.nav{background:var(--ink);height:54px;padding:0 40px;display:flex;align-items:center;justify-content:space-between}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.logo{width:24px;height:24px;border:2px solid #86efac;border-radius:50%;position:relative}
+.logo::after{content:'';position:absolute;width:2px;height:10px;background:#86efac;bottom:-6px;right:2px;transform:rotate(45deg)}
+.nav-name{font-family:'Noto Serif SC',serif;font-size:16px;color:white;letter-spacing:1px}
+.nav-sub{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:1px}
+
+/* HERO */
+.hero{padding:52px 40px 44px;border-bottom:1px solid var(--border);max-width:900px}
+.hero-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px}
+.hero-title{font-family:'Noto Serif SC',serif;font-size:clamp(26px,4vw,42px);font-weight:700;color:var(--ink);line-height:1.25;margin-bottom:12px}
+.hero-title em{font-style:normal;color:var(--green)}
+.hero-desc{font-size:14px;color:var(--text2);max-width:640px;line-height:1.9}
+
+.wrap{max-width:1080px;margin:0 auto;padding:36px 40px}
+
+/* INPUT AREA */
+.input-panel{background:var(--white);border:1px solid var(--border);margin-bottom:20px}
+.panel-hd{padding:14px 22px;background:var(--lift);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.panel-hd-title{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
+.sample-btns{display:flex;gap:6px}
+.sample-btn{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border:1px solid var(--border);background:white;color:var(--text2);cursor:pointer;transition:all .15s}
+.sample-btn:hover{border-color:var(--green);color:var(--green)}
+.panel-body{padding:20px 22px}
+textarea{width:100%;min-height:180px;border:1px solid var(--border);padding:14px 16px;font-family:'Noto Serif SC',serif;font-size:14px;line-height:1.9;color:var(--text);resize:vertical;outline:none}
+textarea:focus{border-color:var(--green)}
+.input-footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.char-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}
+.analyze-btn{padding:10px 28px;background:var(--green);color:white;border:none;font-size:13px;font-weight:500;cursor:pointer;letter-spacing:.5px;transition:opacity .2s}
+.analyze-btn:hover{opacity:.88}
+.analyze-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* RESULTS */
+.results{display:none}
+.results.show{display:block}
+
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:20px}
+.metric{background:var(--white);padding:20px 16px;text-align:center}
+.metric-n{font-family:'Noto Serif SC',serif;font-size:30px;font-weight:700;color:var(--green);line-height:1;margin-bottom:6px}
+.metric-l{font-size:11px;color:var(--text3);line-height:1.5}
+
+.sec-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:4px;text-transform:uppercase;margin:28px 0 14px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* CHART PANEL */
+.chart-panel{background:var(--white);border:1px solid var(--border);padding:22px}
+.chart-title{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:4px}
+.chart-desc{font-size:12px;color:var(--text2);margin-bottom:16px}
+canvas{width:100%;display:block}
+
+/* DIAGNOSIS CARDS */
+.diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.diag{background:var(--white);border:1px solid var(--border);padding:18px 20px;border-left:3px solid var(--border)}
+.diag.good{border-left-color:var(--green)}
+.diag.warn{border-left-color:var(--gold)}
+.diag.info{border-left-color:var(--blue)}
+.diag-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.diag-icon{font-size:16px}
+.diag-title{font-size:13px;font-weight:500;color:var(--ink)}
+.diag-body{font-size:12px;color:var(--text2);line-height:1.85}
+
+/* DIALOGUE BAR */
+.dialogue-bar{height:28px;background:var(--lift);display:flex;overflow:hidden;border:1px solid var(--border);margin-top:6px}
+.db-seg{height:100%}
+.db-dialogue{background:var(--blue)}
+.db-narration{background:var(--border)}
+.db-legend{display:flex;gap:16px;margin-top:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)}
+.db-legend span{display:inline-flex;align-items:center;gap:5px}
+.db-dot{width:8px;height:8px;display:inline-block}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:12px;opacity:.5}
+.empty-text{font-size:13px;font-family:'DM Mono',monospace;letter-spacing:.5px}
+
+/* ABOUT */
+.about{background:var(--ink);padding:32px 40px;margin-top:40px}
+.about-title{font-family:'Noto Serif SC',serif;font-size:18px;color:white;margin-bottom:12px}
+.about-body{font-size:13px;color:rgba(255,255,255,.55);line-height:2;max-width:720px}
+.about-body strong{color:rgba(255,255,255,.85)}
+
+/* FOOTER */
+.footer{background:var(--ink);padding:24px 40px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center}
+.footer-l{font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,.3);line-height:1.9}
+.footer-r{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);text-align:right}
+
+@media(max-width:760px){
+  .nav,.hero,.wrap{padding-left:20px;padding-right:20px}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .diag-grid{grid-template-columns:1fr}
+  .footer{flex-direction:column;gap:12px;text-align:center}
+  .footer-r{text-align:center}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-brand">
+    <div class="logo"></div>
+    <div>
+      <div class="nav-name">StoryLens</div>
+      <div class="nav-sub">叙事节奏诊断工具</div>
+    </div>
+  </div>
+  <div class="nav-sub">by 种健杰</div>
+</div>
+
+<div class="hero">
+  <div class="hero-label">纯前端工具 · 无需网络 · 即开即用</div>
+  <div class="hero-title">把"这段文字读起来<em>顺不顺</em>"<br>变成一件可以量化的事</div>
+  <div class="hero-desc">贴入一段剧本、脚本或文案，工具会分析句长节奏、对话密度、段落分布，画出可视化曲线，并给出结构层面的具体提示。这是我在教学中反复用到的判断维度，做成了一个真正能用的小工具。</div>
+</div>
+
+<div class="wrap">
+
+  <div class="input-panel">
+    <div class="panel-hd">
+      <div class="panel-hd-title">输入文本</div>
+      <div class="sample-btns">
+        <button class="sample-btn" onclick="loadSample('dialogue')">对话密集示例</button>
+        <button class="sample-btn" onclick="loadSample('narration')">叙述密集示例</button>
+        <button class="sample-btn" onclick="loadSample('balanced')">节奏平衡示例</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <textarea id="inputText" placeholder="粘贴一段剧本、脚本、故事或文案，建议300字以上，效果更明显……"></textarea>
+      <div class="input-footer">
+        <div class="char-count" id="charCount">0 字</div>
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">开始诊断 →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+
+    <div class="metrics-grid" id="metricsGrid"></div>
+
+    <div class="sec-label">节奏曲线 · 句长变化</div>
+    <div class="chart-panel">
+      <div class="chart-title">每句字数分布</div>
+      <div class="chart-desc">曲线起伏越大，说明句子长短变化越丰富——短句制造节奏感，长句承载信息量。持续平坦通常意味着阅读体验偏单调。</div>
+      <canvas id="pacingCanvas" height="180"></canvas>
+    </div>
+
+    <div class="sec-label">对话与叙述占比</div>
+    <div class="chart-panel">
+      <div class="chart-title">文本结构分布</div>
+      <div class="chart-desc">对话推进节奏更快，叙述承担铺陈和信息密度。比例本身没有对错，取决于你想要的阅读体验。</div>
+      <div class="dialogue-bar" id="dialogueBar"></div>
+      <div class="db-legend">
+        <span><span class="db-dot" style="background:var(--blue)"></span>对话</span>
+        <span><span class="db-dot" style="background:var(--border)"></span>叙述</span>
+      </div>
+    </div>
+
+    <div class="sec-label">结构提示</div>
+    <div class="diag-grid" id="diagGrid"></div>
+
+  </div>
+
+  <div class="results" id="emptyState">
+    <div class="empty">
+      <div class="empty-icon">✍️</div>
+      <div class="empty-text">粘贴文本后点击「开始诊断」</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="about">
+  <div class="about-title">这个工具在做什么</div>
+  <div class="about-body">
+    所有分析都在浏览器本地完成，不上传任何数据，不调用任何API。<br><br>
+    判断维度来自我5年剧本创作与教学中反复验证的几件事：<strong>句长的变化制造阅读节奏</strong>，<strong>对话和叙述的比例决定阅读体感</strong>，<strong>连续的长句或短句会让读者疲劳</strong>。这些原本是经验判断，现在做成了可以量化观察的曲线。<br><br>
+    这不是要替代人的判断——真正的好坏还是要人来读。它只是把"哪里可能有问题"这件事，从直觉变成了可以看见的东西。
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-l">种健杰 · 传媒内容创作 / 课程研发<br>15822702665</div>
+  <div class="footer-r">StoryLens v1.0<br>纯前端 · MIT License</div>
+</div>
+
+<script>
+const SAMPLES = {
+  dialogue: `"你到底想说什么？"她把杯子重重放在桌上。
+"我想说，我们该谈谈了。"
+"谈什么？谈你三个月没回家这件事吗？"
+"你知道不是这样的。"
+"那是怎样的？"
+"我需要一点时间，就这样。"
+"时间？你已经用了三个月的时间。"
+她转过身去，不再看他。
+"对不起。"他说。
+"对不起解决不了任何问题。"
+"那你想怎样？"
+"我想你告诉我真话。"
+"什么真话？"
+"你到底还爱不爱这个家。"
+他沉默了很久。
+"我爱。"他说，"但我不知道该怎么证明。"`,
+
+  narration: `清晨六点，城市还未完全苏醒，雾气笼罩着整条街道。老陈像往常一样推开面馆的门，铁门发出刺耳的摩擦声，惊醒了几只在屋檐下打盹的麻雀。他把灯一盏一盏打开，橘黄色的光晕逐渐驱散了黑暗，也驱散了这条街上属于夜晚的寂静。厨房里的高汤已经炖了整整一夜，浓郁的香气弥漫在狭小的空间里，那是他父亲传下来的配方，二十年没有变过。案板上摆着切好的葱花和姜末，整齐得像是等待检阅的士兵。老陈系上围裙，那是一条洗得发白的蓝布围裙，边角已经磨损，却依然是他每天早晨必须穿上的仪式。窗外的天色渐渐从深蓝转为浅灰，第一缕阳光即将穿透云层，照进这间开了二十年的老店。`,
+
+  balanced: `雨下了整整一夜。
+
+林静站在窗前，看着楼下积水的街道。手机屏幕又一次亮起，是母亲发来的消息。
+
+"你什么时候回来？"
+
+她没有回复，把手机扣在桌上，走进了厨房。冰箱里只剩下半瓶牛奶和一些不新鲜的蔬菜，这是她搬出来的第三个月。
+
+"应该没问题的。"她对自己说。
+
+窗外的雨声渐渐变大，敲打着老旧的窗框，发出规律的声响。她想起离开家那天，母亲站在门口，什么也没说，只是看着她把最后一个箱子搬上车。
+
+那种沉默比任何指责都更让人难受。
+
+手机又震动了一下。这次她拿起来看了看，然后回复了三个字："快到了。"`
+};
+
+function loadSample(key){
+  document.getElementById('inputText').value = SAMPLES[key];
+  updateCount();
+}
+
+document.getElementById('inputText').addEventListener('input', updateCount);
+function updateCount(){
+  const t = document.getElementById('inputText').value;
+  document.getElementById('charCount').textContent = t.length + ' 字';
+}
+
+function analyze(){
+  const text = document.getElementById('inputText').value.trim();
+  if(text.length < 30){
+    alert('文本太短，建议至少输入100字以上以获得有意义的分析');
+    return;
+  }
+
+  document.getElementById('emptyState').classList.remove('show');
+  document.getElementById('results').classList.add('show');
+
+  // Split into sentences
+  const sentences = text.split(/[。！？\n]+/).map(s=>s.trim()).filter(s=>s.length>0);
+  const lengths = sentences.map(s=>s.length);
+
+  // Dialogue detection (Chinese quotes)
+  const dialogueMatches = text.match(/["""][^"""]*["""]/g) || [];
+  const dialogueChars = dialogueMatches.join('').length;
+  const totalChars = text.replace(/\s/g,'').length;
+  const dialogueRatio = totalChars > 0 ? dialogueChars / totalChars : 0;
+
+  // Metrics
+  const avgLen = lengths.length ? Math.round(lengths.reduce((a,b)=>a+b,0)/lengths.length) : 0;
+  const maxLen = lengths.length ? Math.max(...lengths) : 0;
+  const minLen = lengths.length ? Math.min(...lengths) : 0;
+  const variance = lengths.length ? Math.round(Math.sqrt(lengths.reduce((a,b)=>a+(b-avgLen)**2,0)/lengths.length)) : 0;
+
+  renderMetrics(sentences.length, avgLen, Math.round(dialogueRatio*100), variance);
+  drawPacingChart(lengths);
+  renderDialogueBar(dialogueRatio);
+  renderDiagnosis(lengths, avgLen, variance, dialogueRatio, sentences.length);
+}
+
+function renderMetrics(sentCount, avgLen, dialoguePct, variance){
+  const grid = document.getElementById('metricsGrid');
+  grid.innerHTML = `
+    <div class="metric"><div class="metric-n">${sentCount}</div><div class="metric-l">句子总数</div></div>
+    <div class="metric"><div class="metric-n">${avgLen}</div><div class="metric-l">平均句长（字）</div></div>
+    <div class="metric"><div class="metric-n">${dialoguePct}%</div><div class="metric-l">对话占比</div></div>
+    <div class="metric"><div class="metric-n">${variance}</div><div class="metric-l">句长波动指数</div></div>
+  `;
+}
+
+function drawPacingChart(lengths){
+  const canvas = document.getElementById('pacingCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth;
+  const h = 180;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,w,h);
+
+  if(lengths.length === 0) return;
+
+  const max = Math.max(...lengths, 10);
+  const padding = {top:16, right:16, bottom:24, left:16};
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+  const step = lengths.length > 1 ? chartW / (lengths.length - 1) : 0;
+
+  // Grid lines
+  ctx.strokeStyle = '#e2ddd4';
+  ctx.lineWidth = 1;
+  for(let i=0;i<=3;i++){
+    const y = padding.top + (chartH/3)*i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(w-padding.right, y);
+    ctx.stroke();
+  }
+
+  // Average line
+  const avg = lengths.reduce((a,b)=>a+b,0)/lengths.length;
+  const avgY = padding.top + chartH - (avg/max)*chartH;
+  ctx.strokeStyle = '#c0392b55';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(padding.left, avgY);
+  ctx.lineTo(w-padding.right, avgY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Area fill
+  ctx.beginPath();
+  ctx.moveTo(padding.left, padding.top+chartH);
+  lengths.forEach((len,i)=>{
+    const x = padding.left + step*i;
+    const y = padding.top + chartH - (len/max)*chartH;
+    ctx.lineTo(x,y);
+  });
+  ctx.lineTo(padding.left + step*(lengths.length-1), padding.top+chartH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(26,92,50,0.08)';
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  lengths.forEach((len,i)=>{
+    const x = padding.left + step*i;
+    const y = padding.top + chartH - (len/max)*chartH;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = '#1a5c32';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Points
+  lengths.forEach((len,i)=>{
+    const x = padding.left + step*i;
+    const y = padding.top + chartH - (len/max)*chartH;
+    ctx.beginPath();
+    ctx.arc(x,y,2.5,0,Math.PI*2);
+    ctx.fillStyle = '#1a5c32';
+    ctx.fill();
+  });
+}
+
+function renderDialogueBar(ratio){
+  const bar = document.getElementById('dialogueBar');
+  const dialoguePct = Math.round(ratio*100);
+  bar.innerHTML = `
+    <div class="db-seg db-dialogue" style="width:${dialoguePct}%"></div>
+    <div class="db-seg db-narration" style="width:${100-dialoguePct}%"></div>
+  `;
+}
+
+function renderDiagnosis(lengths, avgLen, variance, dialogueRatio, sentCount){
+  const diags = [];
+
+  // Variance diagnosis
+  if(variance < 5){
+    diags.push({type:'warn', icon:'⚠️', title:'句长变化较小',
+      body:'句子长度比较接近，持续阅读可能显得平稳有余、起伏不足。适当穿插短句能制造停顿感和节奏变化。'});
+  } else if(variance > 15){
+    diags.push({type:'good', icon:'✓', title:'句长节奏丰富',
+      body:'长短句交替明显，这种变化有助于控制阅读的呼吸感——短句制造冲击，长句承载信息。'});
+  } else {
+    diags.push({type:'info', icon:'•', title:'句长节奏适中',
+      body:'长短句有一定变化，处于比较常见的舒适区间。是否需要更强的节奏对比，取决于你想要的阅读体验。'});
+  }
+
+  // Average length diagnosis
+  if(avgLen > 40){
+    diags.push({type:'warn', icon:'⚠️', title:'平均句长偏长',
+      body:`平均每句约${avgLen}字，长句较多。信息密度可能较高，但也可能增加阅读负担，特别是在需要快速抓住注意力的开头部分。`});
+  } else if(avgLen < 15){
+    diags.push({type:'info', icon:'•', title:'平均句长偏短',
+      body:`平均每句约${avgLen}字，短句为主。节奏会比较快，适合强调动作和情绪，但连续短句过多也可能显得破碎。`});
+  } else {
+    diags.push({type:'good', icon:'✓', title:'平均句长适中',
+      body:`平均每句约${avgLen}字，处于比较均衡的区间，兼顾了信息量和阅读流畅度。`});
+  }
+
+  // Dialogue ratio diagnosis
+  const pct = Math.round(dialogueRatio*100);
+  if(pct > 60){
+    diags.push({type:'info', icon:'•', title:'对话占主导',
+      body:`对话占比约${pct}%，推进速度会比较快，人物关系和冲突更直接，但环境和心理层面的铺陈相对较少。`});
+  } else if(pct < 15 && pct > 0){
+    diags.push({type:'info', icon:'•', title:'叙述占主导',
+      body:`对话占比约${pct}%，以叙述描写为主，适合铺陈氛围和背景，但如果目标是抓人的强情节内容，可以考虑增加对话的比重。`});
+  } else if(pct === 0){
+    diags.push({type:'warn', icon:'⚠️', title:'未检测到对话',
+      body:'没有识别到引号包裹的对话内容。如果这是剧本或故事类文本，纯叙述可能会让人物显得不够立体——适当的直接引语能让人物"活起来"。'});
+  } else {
+    diags.push({type:'good', icon:'✓', title:'对话与叙述比例均衡',
+      body:`对话占比约${pct}%，叙述和对话搭配比较均衡，能兼顾信息铺陈和情节推进。`});
+  }
+
+  // Length diagnosis
+  if(sentCount < 5){
+    diags.push({type:'warn', icon:'⚠️', title:'样本句数较少',
+      body:'输入文本的句子数量较少，以上分析的参考价值有限，建议输入更完整的段落以获得更可靠的判断。'});
+  }
+
+  const grid = document.getElementById('diagGrid');
+  grid.innerHTML = diags.map(d => `
+    <div class="diag ${d.type}">
+      <div class="diag-hd"><span class="diag-icon">${d.icon}</span><span class="diag-title">${d.title}</span></div>
+      <div class="diag-body">${d.body}</div>
+    </div>
+  `).join('');
+}
+
+// Load a sample by default for first-time visitors
+window.addEventListener('load', () => {
+  // Optional: don't auto-load, let user choose
+});
+</script>
+</body>
+</html>
