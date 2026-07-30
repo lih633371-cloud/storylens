@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FrameGrade · AIGC视频质检评分系统</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+:root{--ink:#0d0d12;--paper:#f7f5f0;--white:#fff;--border:#e2ddd4;--lift:#f0ede6;--green:#1a5c32;--blue:#2a4a8a;--gold:#a07510;--red:#a02828;--text:#1a1712;--text2:#6a6258;--text3:#a8a090}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--text);font-family:'Noto Sans SC',sans-serif;font-weight:300;line-height:1.7}
+.nav{background:var(--ink);height:54px;padding:0 40px;display:flex;align-items:center;justify-content:space-between}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.logo{width:22px;height:22px;border:2px solid #7dd3fc;position:relative;transform:rotate(45deg)}
+.nav-name{font-family:'Noto Serif SC',serif;font-size:16px;color:white;letter-spacing:1px}
+.nav-sub{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:1px}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{font-family:'DM Mono',monospace;font-size:11px;padding:6px 16px;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:2px solid transparent;letter-spacing:1px}
+.nav-tab.active{color:white;border-bottom-color:#7dd3fc}
+.hero{padding:44px 40px 36px;border-bottom:1px solid var(--border);max-width:920px}
+.hero-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:4px;text-transform:uppercase;margin-bottom:12px}
+.hero-title{font-family:'Noto Serif SC',serif;font-size:clamp(22px,3.2vw,32px);font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:10px}
+.hero-title em{font-style:normal;color:var(--blue)}
+.hero-desc{font-size:13px;color:var(--text2);max-width:660px;line-height:1.9}
+.hero-note{margin-top:14px;padding:11px 15px;background:var(--lift);border-left:3px solid var(--gold);font-size:12px;color:var(--text2);line-height:1.8;max-width:660px}
+.hero-note strong{color:var(--text)}
+.wrap{max-width:1140px;margin:0 auto;padding:32px 40px}
+.view{display:none}
+.view.active{display:block}
+.layout{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+.sec-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.meta-panel{background:var(--white);border:1px solid var(--border);margin-bottom:16px}
+.panel-hd{padding:12px 20px;background:var(--lift);border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.sample-btns{display:flex;gap:6px}
+.sample-btn{font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border:1px solid var(--border);background:white;color:var(--text2);cursor:pointer}
+.sample-btn:hover{border-color:var(--blue);color:var(--blue)}
+.meta-body{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:5px}
+.field input,.field select{width:100%;border:1px solid var(--border);padding:7px 10px;font-size:13px;outline:none;color:var(--text)}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.field.full{grid-column:1/-1}
+.dim-card{background:var(--white);border:1px solid var(--border);margin-bottom:12px}
+.dim-hd{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.dim-name{font-size:14px;font-weight:500;color:var(--ink)}
+.dim-score{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--blue)}
+.dim-body{padding:16px 20px}
+.criteria-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.criterion{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.criterion-label{font-size:12px;color:var(--text2);flex:1}
+.criterion-select{display:flex;gap:4px}
+.rating-btn{width:28px;height:28px;border:1px solid var(--border);background:white;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);cursor:pointer;transition:all .12s}
+.rating-btn:hover{border-color:var(--blue)}
+.rating-btn.active{background:var(--blue);border-color:var(--blue);color:white}
+.tag-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin:12px 0 8px}
+.tag-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.defect-tag{font-size:11px;padding:5px 11px;border:1px solid var(--border);color:var(--text2);cursor:pointer;user-select:none;transition:all .12s}
+.defect-tag:hover{border-color:var(--red)}
+.defect-tag.on{background:var(--red);border-color:var(--red);color:white}
+.dim-note{width:100%;border:1px solid var(--border);padding:8px 10px;font-size:12px;outline:none;resize:vertical;min-height:44px;color:var(--text);font-family:'Noto Sans SC',sans-serif}
+.dim-note:focus{border-color:var(--blue)}
+.report-panel{position:sticky;top:20px}
+.report-card{background:var(--ink);color:white;padding:24px}
+.report-title{font-family:'Noto Serif SC',serif;font-size:16px;margin-bottom:4px}
+.report-sub{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);margin-bottom:20px}
+.overall-score{text-align:center;padding:20px 0;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px}
+.overall-n{font-family:'Noto Serif SC',serif;font-size:48px;font-weight:700;line-height:1}
+.overall-n.pass{color:#86efac}.overall-n.warn{color:#fcd34d}.overall-n.fail{color:#fca5a5}
+.overall-l{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;margin-top:6px}
+.score-breakdown{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.sb-row{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.sb-label{color:rgba(255,255,255,.55);width:70px;flex-shrink:0}
+.sb-bar-wrap{flex:1;margin:0 10px;height:4px;background:rgba(255,255,255,.1);position:relative}
+.sb-bar{height:100%;background:#7dd3fc;position:absolute;left:0;top:0}
+.sb-val{font-family:'DM Mono',monospace;color:rgba(255,255,255,.8);width:24px;text-align:right}
+.export-btns{display:flex;flex-direction:column;gap:8px}
+.export-btn{padding:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);font-size:12px;cursor:pointer;text-align:center;transition:all .15s}
+.export-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+.export-btn.primary{background:#2a4a8a;border-color:#2a4a8a}
+.export-btn.primary:hover{background:#3a5a9a}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:24px}
+.stat-box{background:var(--white);padding:20px 16px;text-align:center}
+.stat-n{font-family:'Noto Serif SC',serif;font-size:28px;font-weight:700;color:var(--blue);line-height:1;margin-bottom:5px}
+.stat-l{font-size:11px;color:var(--text3)}
+.tool-compare{background:var(--white);border:1px solid var(--border);padding:20px 22px;margin-bottom:24px}
+.tc-title{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:14px}
+.tc-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.tc-name{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);width:80px;flex-shrink:0}
+.tc-bar-wrap{flex:1;height:16px;background:var(--lift);position:relative}
+.tc-bar{height:100%;background:var(--green)}
+.tc-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);width:36px;text-align:right}
+.tc-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);width:50px;text-align:right}
+.defect-freq{background:var(--white);border:1px solid var(--border);padding:20px 22px;margin-bottom:24px}
+.df-title{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:14px}
+.df-list{display:flex;flex-direction:column;gap:8px}
+.df-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.df-name{width:140px;color:var(--text2);flex-shrink:0}
+.df-bar-wrap{flex:1;height:10px;background:var(--lift);position:relative}
+.df-bar{height:100%;background:var(--red)}
+.df-count{font-family:'DM Mono',monospace;color:var(--text3);width:30px;text-align:right}
+.history-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--border)}
+.history-table th{background:var(--lift);padding:10px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.history-table td{padding:10px 14px;font-size:12px;color:var(--text);border-bottom:1px solid var(--border)}
+.history-table tr:hover td{background:var(--lift)}
+.score-badge{font-family:'DM Mono',monospace;font-weight:700;padding:2px 8px;display:inline-block}
+.score-badge.pass{background:#e6f4ea;color:var(--green)}
+.score-badge.warn{background:#fdf3e0;color:var(--gold)}
+.score-badge.fail{background:#fbe8e6;color:var(--red)}
+.del-btn{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);cursor:pointer;border:none;background:none}
+.del-btn:hover{color:var(--red)}
+.empty-history{text-align:center;padding:48px;color:var(--text3);font-family:'DM Mono',monospace;font-size:12px}
+.about{background:var(--ink);padding:32px 40px;margin-top:36px}
+.about-title{font-family:'Noto Serif SC',serif;font-size:18px;color:white;margin-bottom:12px}
+.about-body{font-size:13px;color:rgba(255,255,255,.55);line-height:2;max-width:720px}
+.about-body strong{color:rgba(255,255,255,.85)}
+.footer{background:var(--ink);padding:24px 40px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center}
+.footer-l{font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,.3);line-height:1.9}
+.footer-r{font-family:'DM Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);text-align:right}
+@media(max-width:900px){
+  .nav,.hero,.wrap{padding-left:20px;padding-right:20px}
+  .layout{grid-template-columns:1fr}
+  .report-panel{position:static}
+  .meta-body{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .footer{flex-direction:column;gap:12px;text-align:center}
+  .nav{flex-wrap:wrap;height:auto;padding:10px 20px}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-brand">
+    <div class="logo"></div>
+    <div><div class="nav-name">FrameGrade</div><div class="nav-sub">AIGC视频质检评分系统</div></div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-view="evaluate" onclick="switchView('evaluate')">评测</div>
+    <div class="nav-tab" data-view="history" onclick="switchView('history')">记录与统计</div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-label">评测方法论工具 · 纯前端 · 无需网络</div>
+  <div class="hero-title">给AI生成的视频，<em>一套可积累、可对比</em>的评分体系</div>
+  <div class="hero-desc">单次打分只是第一步。真正有用的评测系统需要统一的缺陷标签、可追溯的历史记录、跨样本跨工具的横向对比。这个工具把这三件事都做了。</div>
+  <div class="hero-note"><strong>说明：</strong>这不是自动视频分析工具，浏览器无法真正"看懂"视频内容。这是评测方法论的落地实现——统一标准、标准化标签、结构化积累，这正是评测和标注工作真正依赖的基础设施。</div>
+</div>
+
+<div class="wrap">
+
+  <div class="view active" id="view-evaluate">
+    <div class="layout">
+      <div class="main-col">
+
+        <div class="sec-label"><span>样本信息</span></div>
+        <div class="meta-panel">
+          <div class="panel-hd">
+            <span>待评测样本</span>
+            <div class="sample-btns">
+              <button class="sample-btn" onclick="loadSample()">加载示例</button>
+              <button class="sample-btn" onclick="clearAll()">清空</button>
+            </div>
+          </div>
+          <div class="meta-body">
+            <div class="field"><label>样本ID</label><input id="sampleId" placeholder="例如 VID-2025-0311"/></div>
+            <div class="field"><label>生成工具</label>
+              <select id="tool"><option>即梦</option><option>可灵</option><option>Runway</option><option>Sora</option><option>Pika</option><option>其他</option></select>
+            </div>
+            <div class="field"><label>提示词摘要</label><input id="promptSummary" placeholder="例如：中景，人物在雨中行走，跟随镜头"/></div>
+            <div class="field"><label>评测人</label><input id="evaluator" value="种健杰"/></div>
+            <div class="field full"><label>场景描述 / 备注</label><input id="sceneDesc" placeholder="简述这条视频想测试的重点，或场景类型"/></div>
+          </div>
+        </div>
+
+        <div class="sec-label"><span>评测维度</span></div>
+
+        <div class="dim-card" data-dim="camera">
+          <div class="dim-hd"><div class="dim-name">01 · 镜头语言</div><div class="dim-score" data-score="camera">–</div></div>
+          <div class="dim-body">
+            <div class="criteria-list">
+              <div class="criterion"><div class="criterion-label">景别与构图是否符合提示词预期</div><div class="criterion-select" data-key="composition"></div></div>
+              <div class="criterion"><div class="criterion-label">镜头运动是否流畅、无异常抖动</div><div class="criterion-select" data-key="movement"></div></div>
+              <div class="criterion"><div class="criterion-label">画面景深与虚实处理是否自然</div><div class="criterion-select" data-key="depth"></div></div>
+            </div>
+            <div class="tag-label">常见问题标签（可多选）</div>
+            <div class="tag-grid" data-tags="camera">
+              <span class="defect-tag" data-tag="构图失衡">构图失衡</span>
+              <span class="defect-tag" data-tag="镜头抖动">镜头抖动</span>
+              <span class="defect-tag" data-tag="景深异常">景深异常</span>
+              <span class="defect-tag" data-tag="运镜与提示词不符">运镜与提示词不符</span>
+            </div>
+            <textarea class="dim-note" data-note="camera" placeholder="补充说明……"></textarea>
+          </div>
+        </div>
+
+        <div class="dim-card" data-dim="narrative">
+          <div class="dim-hd"><div class="dim-name">02 · 叙事逻辑</div><div class="dim-score" data-score="narrative">–</div></div>
+          <div class="dim-body">
+            <div class="criteria-list">
+              <div class="criterion"><div class="criterion-label">动作 / 事件先后顺序是否符合逻辑</div><div class="criterion-select" data-key="sequence"></div></div>
+              <div class="criterion"><div class="criterion-label">节奏是否与预期情绪基调匹配</div><div class="criterion-select" data-key="pacing"></div></div>
+              <div class="criterion"><div class="criterion-label">时长内内容完整度（是否头重脚轻）</div><div class="criterion-select" data-key="completeness"></div></div>
+            </div>
+            <div class="tag-label">常见问题标签（可多选）</div>
+            <div class="tag-grid" data-tags="narrative">
+              <span class="defect-tag" data-tag="逻辑跳跃">逻辑跳跃</span>
+              <span class="defect-tag" data-tag="节奏失控">节奏失控</span>
+              <span class="defect-tag" data-tag="内容缺失">内容缺失</span>
+              <span class="defect-tag" data-tag="情绪基调偏差">情绪基调偏差</span>
+            </div>
+            <textarea class="dim-note" data-note="narrative" placeholder="补充说明……"></textarea>
+          </div>
+        </div>
+
+        <div class="dim-card" data-dim="consistency">
+          <div class="dim-hd"><div class="dim-name">03 · 视觉一致性</div><div class="dim-score" data-score="consistency">–</div></div>
+          <div class="dim-body">
+            <div class="criteria-list">
+              <div class="criterion"><div class="criterion-label">人物/ 主体形象在全片是否保持一致</div><div class="criterion-select" data-key="subject"></div></div>
+              <div class="criterion"><div class="criterion-label">色调与光线是否连贯，无突兀跳变</div><div class="criterion-select" data-key="lighting"></div></div>
+              <div class="criterion"><div class="criterion-label">背景与场景元素是否稳定不闪烁</div><div class="criterion-select" data-key="background"></div></div>
+            </div>
+            <div class="tag-label">常见问题标签（可多选）</div>
+            <div class="tag-grid" data-tags="consistency">
+              <span class="defect-tag" data-tag="人脸漂移">人脸漂移</span>
+              <span class="defect-tag" data-tag="服装/道具突变">服装/道具突变</span>
+              <span class="defect-tag" data-tag="色调跳变">色调跳变</span>
+              <span class="defect-tag" data-tag="背景闪烁">背景闪烁</span>
+            </div>
+            <textarea class="dim-note" data-note="consistency" placeholder="补充说明……"></textarea>
+          </div>
+        </div>
+
+        <div class="dim-card" data-dim="artifact">
+          <div class="dim-hd"><div class="dim-name">04 · 技术缺陷</div><div class="dim-score" data-score="artifact">–</div></div>
+          <div class="dim-body">
+            <div class="criteria-list">
+              <div class="criterion"><div class="criterion-label">是否存在肢体 / 手部畸变等生成伪影</div><div class="criterion-select" data-key="deform"></div></div>
+              <div class="criterion"><div class="criterion-label">是否存在画面模糊、锯齿或分辨率异常</div><div class="criterion-select" data-key="resolution"></div></div>
+              <div class="criterion"><div class="criterion-label">是否存在文字水印等非预期内容</div><div class="criterion-select" data-key="artifact2"></div></div>
+            </div>
+            <div class="tag-label">常见问题标签（可多选）</div>
+            <div class="tag-grid" data-tags="artifact">
+              <span class="defect-tag" data-tag="手部畸变">手部畸变</span>
+              <span class="defect-tag" data-tag="肢体畸变">肢体畸变</span>
+              <span class="defect-tag" data-tag="画面模糊">画面模糊</span>
+              <span class="defect-tag" data-tag="水印/文字">水印/文字</span>
+              <span class="defect-tag" data-tag="边缘锯齿">边缘锯齿</span>
+            </div>
+            <textarea class="dim-note" data-note="artifact" placeholder="补充说明……"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="report-panel">
+        <div class="report-card">
+          <div class="report-title">评测报告</div>
+          <div class="report-sub">REAL-TIME REPORT</div>
+          <div class="overall-score">
+            <div class="overall-n" id="overallScore">–</div>
+            <div class="overall-l">综合评分（满分5分）</div>
+          </div>
+          <div class="score-breakdown" id="breakdown"></div>
+          <div class="export-btns">
+            <button class="export-btn primary" onclick="saveToHistory()">✓ 保存到评测记录</button>
+            <button class="export-btn" onclick="exportReport('md')">导出 Markdown 报告</button>
+            <button class="export-btn" onclick="exportReport('json')">导出 JSON 数据</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-history">
+    <div class="sec-label"><span>总体统计</span></div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="sec-label"><span>按生成工具对比</span></div>
+    <div class="tool-compare" id="toolCompare"></div>
+    <div class="sec-label"><span>高频问题标签</span></div>
+    <div class="defect-freq" id="defectFreq"></div>
+    <div class="sec-label">
+      <span>全部评测记录</span>
+      <div style="display:flex;gap:8px">
+        <button class="sample-btn" onclick="exportCSV()">导出 CSV</button>
+        <button class="sample-btn" onclick="clearHistory()">清空全部记录</button>
+      </div>
+    </div>
+    <div id="historyTableWrap"></div>
+  </div>
+
+</div>
+
+<div class="about">
+  <div class="about-title">这个工具在解决什么问题</div>
+  <div class="about-body">
+    AI生成内容的评测最大的挑战不是技术，是<strong>标准不统一、结果不可积累</strong>。单次评测容易做，难的是让多次评测的结果能横向对比——这个工具加入了标准化缺陷标签（而不是自由文本），以及跨样本、跨工具的统计对比视图，让评测数据真正能沉淀成可以复盘的资产。<br><br>
+    <strong>所有数据保存在本地浏览器，不上传任何内容。</strong>维度和标签体系的设计基于我在影视内容创作中的专业判断，以及长期使用即梦、可灵进行AI视频生成的实践积累。
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-l">种健杰 · 传媒内容创作 / AIGC视频实践<br>15822702665</div>
+  <div class="footer-r">FrameGrade v2.0<br>纯前端 · MIT License</div>
+</div>
+
+<script>
+const DIMENSIONS = {camera:['composition','movement','depth'],narrative:['sequence','pacing','completeness'],consistency:['subject','lighting','background'],artifact:['deform','resolution','artifact2']};
+const DIM_NAMES = {camera:'镜头语言',narrative:'叙事逻辑',consistency:'视觉一致性',artifact:'技术缺陷'};
+const scores = {};
+const activeTags = {camera:new Set(),narrative:new Set(),consistency:new Set(),artifact:new Set()};
+
+function switchView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active', t.dataset.view===view));
+  if(view === 'history') renderHistory();
+}
+
+document.querySelectorAll('.criterion-select').forEach(container => {
+  const key = container.dataset.key;
+  for(let i=1;i<=5;i++){
+    const btn = document.createElement('button');
+    btn.className = 'rating-btn'; btn.textContent = i;
+    btn.onclick = () => setScore(key, i, container);
+    container.appendChild(btn);
+  }
+});
+
+document.querySelectorAll('.defect-tag').forEach(tag => {
+  tag.addEventListener('click', () => {
+    const dim = tag.closest('[data-tags]').dataset.tags;
+    const val = tag.dataset.tag;
+    tag.classList.toggle('on');
+    if(activeTags[dim].has(val)) activeTags[dim].delete(val); else activeTags[dim].add(val);
+  });
+});
+
+function setScore(key, val, container){
+  scores[key] = val;
+  container.querySelectorAll('.rating-btn').forEach((b,i)=>b.classList.toggle('active', i+1===val));
+  updateReport();
+}
+function dimAverage(dim){
+  const vals = DIMENSIONS[dim].map(k=>scores[k]).filter(v=>v!==undefined);
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+}
+function updateReport(){
+  let total=0,count=0;
+  const breakdown = document.getElementById('breakdown'); breakdown.innerHTML='';
+  Object.keys(DIMENSIONS).forEach(dim => {
+    const avg = dimAverage(dim);
+    document.querySelector(`[data-score="${dim}"]`).textContent = avg?avg.toFixed(1):'–';
+    if(avg!==null){total+=avg;count++;}
+    const pct = avg?(avg/5*100):0;
+    const row = document.createElement('div'); row.className='sb-row';
+    row.innerHTML = `<span class="sb-label">${DIM_NAMES[dim]}</span><div class="sb-bar-wrap"><div class="sb-bar" style="width:${pct}%"></div></div><span class="sb-val">${avg?avg.toFixed(1):'–'}</span>`;
+    breakdown.appendChild(row);
+  });
+  const el = document.getElementById('overallScore');
+  if(count>0){ const overall=total/count; el.textContent=overall.toFixed(1); el.className='overall-n '+(overall>=4?'pass':overall>=2.5?'warn':'fail'); }
+  else { el.textContent='–'; el.className='overall-n'; }
+}
+function loadSample(){
+  document.getElementById('sampleId').value='VID-2025-0311';
+  document.getElementById('promptSummary').value='中景，人物雨中独自行走，跟随镜头，暖色调逆光';
+  document.getElementById('sceneDesc').value='测试人物运动场景下的AI视频稳定性表现';
+  const s={composition:4,movement:3,depth:4,sequence:4,pacing:3,completeness:4,subject:2,lighting:4,background:3,deform:2,resolution:4,artifact2:5};
+  Object.entries(s).forEach(([k,v])=>{const c=document.querySelector(`[data-key="${k}"]`);if(c)setScore(k,v,c);});
+  document.querySelector('[data-note="camera"]').value='镜头运动在第3秒附近出现轻微跳帧，跟随速度与人物步伐不完全同步。';
+  document.querySelector('[data-note="consistency"]').value='人物面部特征在中段（约第5-7秒）出现明显漂移，是本次生成最主要的问题点。';
+  document.querySelector('[data-note="artifact"]').value='手部在摆动时出现轻微多指伪影，持续约1秒。';
+  const t1=document.querySelector(`[data-tags="consistency"] [data-tag="人脸漂移"]`); if(t1){t1.classList.add('on');activeTags.consistency.add('人脸漂移');}
+  const t2=document.querySelector(`[data-tags="artifact"] [data-tag="手部畸变"]`); if(t2){t2.classList.add('on');activeTags.artifact.add('手部畸变');}
+}
+function clearAll(){
+  document.querySelectorAll('.meta-body input').forEach(i=>{if(i.id!=='evaluator')i.value='';});
+  document.querySelectorAll('.dim-note').forEach(t=>t.value='');
+  document.querySelectorAll('.rating-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.defect-tag').forEach(t=>t.classList.remove('on'));
+  Object.keys(scores).forEach(k=>delete scores[k]);
+  Object.keys(activeTags).forEach(k=>activeTags[k].clear());
+  updateReport();
+}
+function buildReportData(){
+  const cn={composition:'景别与构图',movement:'镜头运动流畅度',depth:'景深虚实处理',sequence:'动作事件顺序',pacing:'节奏与情绪匹配',completeness:'内容完整度',subject:'主体一致性',lighting:'色调光线连贯性',background:'背景稳定性',deform:'肢体畸变',resolution:'分辨率与清晰度',artifact2:'水印等非预期内容'};
+  const data={id:'FG-'+Date.now(),sampleId:document.getElementById('sampleId').value||'未命名',tool:document.getElementById('tool').value,promptSummary:document.getElementById('promptSummary').value,evaluator:document.getElementById('evaluator').value,sceneDesc:document.getElementById('sceneDesc').value,timestamp:new Date().toLocaleString('zh-CN'),dimensions:{}};
+  Object.keys(DIMENSIONS).forEach(dim=>{
+    const avg=dimAverage(dim);
+    data.dimensions[dim]={name:DIM_NAMES[dim],score:avg?+avg.toFixed(2):null,criteria:DIMENSIONS[dim].map(k=>({name:cn[k],score:scores[k]||null})),tags:Array.from(activeTags[dim]),note:document.querySelector(`[data-note="${dim}"]`).value};
+  });
+  const all=Object.values(data.dimensions).map(d=>d.score).filter(v=>v!==null);
+  data.overallScore = all.length?+(all.reduce((a,b)=>a+b,0)/all.length).toFixed(2):null;
+  return data;
+}
+function exportReport(format){
+  const data=buildReportData();
+  if(format==='json'){downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`FrameGrade_${data.sampleId}.json`);return;}
+  let md=`# AIGC视频质检报告\n\n**样本ID：** ${data.sampleId}\n**生成工具：** ${data.tool}\n**提示词摘要：** ${data.promptSummary||'（未填写）'}\n**评测人：** ${data.evaluator}\n**评测时间：** ${data.timestamp}\n**场景说明：** ${data.sceneDesc||'（未填写）'}\n\n## 综合评分：${data.overallScore??'–'} / 5\n\n`;
+  Object.values(data.dimensions).forEach(dim=>{
+    md+=`### ${dim.name}（${dim.score??'–'} / 5）\n\n`;
+    dim.criteria.forEach(c=>md+=`- ${c.name}：${c.score!==null?c.score+'/5':'未评分'}\n`);
+    if(dim.tags.length) md+=`\n**问题标签：** ${dim.tags.join('、')}\n`;
+    if(dim.note) md+=`\n> 备注：${dim.note}\n`;
+    md+=`\n`;
+  });
+  md+=`---\n*生成于 FrameGrade · AIGC视频质检评分系统*`;
+  downloadBlob(new Blob([md],{type:'text/markdown'}),`FrameGrade_${data.sampleId}.md`);
+}
+function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
+function getHistory(){try{return JSON.parse(localStorage.getItem('framegrade_history')||'[]');}catch(e){return [];}}
+function saveToHistory(){
+  const data=buildReportData();
+  if(data.overallScore===null){alert('请至少完成一个维度的评分再保存');return;}
+  const history=getHistory(); history.unshift(data);
+  localStorage.setItem('framegrade_history',JSON.stringify(history.slice(0,200)));
+  alert('已保存到评测记录（当前共 '+history.length+' 条）');
+}
+function clearHistory(){if(!confirm('确定清空全部评测记录？此操作不可撤销。'))return;localStorage.removeItem('framegrade_history');renderHistory();}
+function deleteRecord(id){const history=getHistory().filter(h=>h.id!==id);localStorage.setItem('framegrade_history',JSON.stringify(history));renderHistory();}
+function scoreClass(score){if(score===null||score===undefined)return '';return score>=4?'pass':score>=2.5?'warn':'fail';}
+function renderHistory(){
+  const history=getHistory();
+  const statsGrid=document.getElementById('statsGrid');
+  const avgOverall=history.length?(history.reduce((a,h)=>a+(h.overallScore||0),0)/history.length).toFixed(2):'–';
+  const toolSet=new Set(history.map(h=>h.tool));
+  const passCount=history.filter(h=>h.overallScore>=4).length;
+  statsGrid.innerHTML=`<div class="stat-box"><div class="stat-n">${history.length}</div><div class="stat-l">累计评测样本</div></div><div class="stat-box"><div class="stat-n">${avgOverall}</div><div class="stat-l">平均综合评分</div></div><div class="stat-box"><div class="stat-n">${toolSet.size}</div><div class="stat-l">涉及生成工具</div></div><div class="stat-box"><div class="stat-n">${passCount}</div><div class="stat-l">达标样本数（≥4分）</div></div>`;
+  const toolStats={};
+  history.forEach(h=>{if(!toolStats[h.tool])toolStats[h.tool]=[];if(h.overallScore!==null)toolStats[h.tool].push(h.overallScore);});
+  const tc=document.getElementById('toolCompare');
+  if(Object.keys(toolStats).length===0){tc.innerHTML=`<div class="empty-history">暂无数据，去"评测"页保存第一条记录</div>`;}
+  else{tc.innerHTML=`<div class="tc-title">各工具平均综合评分</div>`+Object.entries(toolStats).map(([tool,vals])=>{
+    const avg=vals.reduce((a,b)=>a+b,0)/vals.length;const pct=avg/5*100;
+    return `<div class="tc-row"><div class="tc-name">${tool}</div><div class="tc-bar-wrap"><div class="tc-bar" style="width:${pct}%"></div></div><div class="tc-val">${avg.toFixed(2)}</div><div class="tc-count">${vals.length}条</div></div>`;
+  }).join('');}
+  const tagFreq={};
+  history.forEach(h=>{Object.values(h.dimensions||{}).forEach(dim=>{(dim.tags||[]).forEach(tag=>{tagFreq[tag]=(tagFreq[tag]||0)+1;});});});
+  const sortedTags=Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const df=document.getElementById('defectFreq');
+  if(sortedTags.length===0){df.innerHTML=`<div class="empty-history">暂无标签数据</div>`;}
+  else{const maxCount=sortedTags[0][1];
+    df.innerHTML=`<div class="df-title">出现频率最高的问题标签</div><div class="df-list">`+sortedTags.map(([tag,count])=>{
+      const pct=count/maxCount*100;
+      return `<div class="df-row"><div class="df-name">${tag}</div><div class="df-bar-wrap"><div class="df-bar" style="width:${pct}%"></div></div><div class="df-count">${count}</div></div>`;
+    }).join('')+`</div>`;
+  }
+  const wrap=document.getElementById('historyTableWrap');
+  if(history.length===0){wrap.innerHTML=`<div class="empty-history">还没有评测记录。去"评测"页完成一次打分并保存。</div>`;return;}
+  wrap.innerHTML=`<table class="history-table"><thead><tr><th>样本ID</th><th>工具</th><th>综合评分</th><th>镜头</th><th>叙事</th><th>一致性</th><th>技术</th><th>评测时间</th><th></th></tr></thead><tbody>${history.map(h=>`<tr><td>${h.sampleId}</td><td>${h.tool}</td><td><span class="score-badge ${scoreClass(h.overallScore)}">${h.overallScore??'–'}</span></td><td>${(h.dimensions.camera&&h.dimensions.camera.score)??'–'}</td><td>${(h.dimensions.narrative&&h.dimensions.narrative.score)??'–'}</td><td>${(h.dimensions.consistency&&h.dimensions.consistency.score)??'–'}</td><td>${(h.dimensions.artifact&&h.dimensions.artifact.score)??'–'}</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${h.timestamp}</td><td><button class="del-btn" onclick="deleteRecord('${h.id}')">删除</button></td></tr>`).join('')}</tbody></table>`;
+}
+function exportCSV(){
+  const history=getHistory();
+  if(history.length===0){alert('暂无记录可导出');return;}
+  const headers=['样本ID','生成工具','提示词摘要','评测人','综合评分','镜头语言','叙事逻辑','视觉一致性','技术缺陷','问题标签','评测时间'];
+  const rows=history.map(h=>[h.sampleId,h.tool,(h.promptSummary||'').replace(/,/g,'，'),h.evaluator,h.overallScore,(h.dimensions.camera&&h.dimensions.camera.score),(h.dimensions.narrative&&h.dimensions.narrative.score),(h.dimensions.consistency&&h.dimensions.consistency.score),(h.dimensions.artifact&&h.dimensions.artifact.score),Object.values(h.dimensions).flatMap(d=>d.tags||[]).join('；'),h.timestamp]);
+  const csv=[headers.join(','),...rows.map(r=>r.map(v=>`"${v??''}"`).join(','))].join('\n');
+  downloadBlob(new Blob(['\uFEFF'+csv],{type:'text/csv'}),`FrameGrade_历史记录_${Date.now()}.csv`);
+}
+</script>
+</body>
+</html>
